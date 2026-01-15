@@ -48,8 +48,8 @@
 
 1. **Клонируйте репозиторий:**
 ```bash
-git clone https://github.com/S1ii/nekto.me-spion.git
-cd nekto.me-spion
+git clone https://github.com/S1ii/nekto.me-multiMITM-web.git
+cd nekto.me-multiMITM-web
 ```
 
 2. **Установите зависимости:**
@@ -113,7 +113,7 @@ adult = True
 ### 📁 Структура проекта
 
 ```
-nekto.me-spion/
+nekto.me-multiMITM-web/
 ├── src/                   # Исходный код
 │   ├── __init__.py       # Package initialization
 │   ├── client.py         # Класс клиента Nekto.me
@@ -196,7 +196,7 @@ nekto.me-spion/
 
 ### � Благодарности
 
-Этот проект основан на оригинальной работе [pashtetx/nekto.me-spion](https://github.com/pashtetx/nekto.me-spion).
+Этот проект основан на оригинальной работе [pashtetx/nekto.me-multiMITM-web](https://github.com/pashtetx/nekto.me-multiMITM-web).
 
 **Основные доработки:**
 - ✨ Веб-интерфейс с real-time мониторингом через WebSocket
@@ -239,8 +239,8 @@ nekto.me-spion/
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/S1ii/nekto.me-spion.git
-cd nekto.me-spion
+git clone https://github.com/S1ii/nekto.me-multiMITM-web.git
+cd nekto.me-multiMITM-web
 ```
 
 2. **Install dependencies:**
@@ -270,7 +270,7 @@ Navigate to: `http://localhost:8000`
 
 ### � Credits
 
-This project is based on the original work by [pashtetx/nekto.me-spion](https://github.com/pashtetx/nekto.me-spion).
+This project is based on the original work by [pashtetx/nekto.me-multiMITM-web](https://github.com/pashtetx/nekto.me-multiMITM-web).
 
 **Major enhancements:**
 - ✨ Web interface with real-time WebSocket monitoring
