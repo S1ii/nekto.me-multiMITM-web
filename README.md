@@ -196,7 +196,7 @@ nekto.me-multiMITM-web/
 
 ### � Благодарности
 
-Этот проект основан на оригинальной работе [pashtetx/nekto.me-multiMITM-web](https://github.com/pashtetx/nekto.me-multiMITM-web).
+Этот проект основан на оригинальной работе [pashtetx/nekto.me-spion](https://github.com/pashtetx/nekto.me-spion).
 
 **Основные доработки:**
 - ✨ Веб-интерфейс с real-time мониторингом через WebSocket
@@ -270,7 +270,7 @@ Navigate to: `http://localhost:8000`
 
 ### � Credits
 
-This project is based on the original work by [pashtetx/nekto.me-multiMITM-web](https://github.com/pashtetx/nekto.me-multiMITM-web).
+This project is based on the original work by [pashtetx/nekto.me-spion](https://github.com/pashtetx/nekto.me-spion).
 
 **Major enhancements:**
 - ✨ Web interface with real-time WebSocket monitoring
