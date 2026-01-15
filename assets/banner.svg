@@ -1,0 +1,29 @@
+<svg fill="none" viewBox="0 0 800 400" width="800" height="400" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="400" fill="#0d1117" rx="15"/>
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#161b22;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d1117;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <path d="M0 40H800M0 80H800M0 120H800M0 160H800" stroke="#30363d" stroke-width="1" opacity="0.3"/>
+  
+  <text x="40" y="100" fill="#58a6ff" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="48" font-weight="800">nekto.me <tspan fill="#ff7b72">SPY</tspan></text>
+  <text x="40" y="140" fill="#8b949e" font-family="monospace" font-size="18">Anonymous Chat Interceptor &amp; Log Manager</text>
+  
+  <rect x="40" y="180" width="400" height="180" fill="#161b22" rx="10" stroke="#30363d"/>
+  <circle cx="60" cy="195" r="4" fill="#ff5f56"/>
+  <circle cx="75" cy="195" r="4" fill="#ffbd2e"/>
+  <circle cx="90" cy="195" r="4" fill="#27c93f"/>
+  
+  <text x="55" y="230" fill="#7ee787" font-family="monospace" font-size="12">[INFO] WebSocket connected...</text>
+  <text x="55" y="255" fill="#d2a8ff" font-family="monospace" font-size="12">[CHAT] Room 17684372 active</text>
+  <text x="55" y="280" fill="#ffa657" font-family="monospace" font-size="12">[SPY] Intercepting message: "Hello..."</text>
+  <text x="55" y="305" fill="#8b949e" font-family="monospace" font-size="12">[LOG] Saved to chat_logs/room_2026...</text>
+
+  <circle cx="600" cy="200" r="80" stroke="#58a6ff" stroke-width="2" stroke-dasharray="10 5" opacity="0.5"/>
+  <circle cx="600" cy="200" r="40" fill="#58a6ff" opacity="0.1"/>
+  <path d="M570 200 Q600 160 630 200 Q600 240 570 200" stroke="#ff7b72" stroke-width="4" fill="none"/>
+  <circle cx="600" cy="200" r="8" fill="#ff7b72"/>
+</svg>

@@ -1,0 +1,25 @@
+[settings]
+clients = client-1-M client-2-F # обязательно сохраняйте чередование M/F клиентов
+# debug = False # True or False
+
+[client/client-1-M]
+token = YOUR_MALE_CLIENT_TOKEN_HERE
+ua = YOUR_USER_AGENT_HERE
+age = 18,25
+wish-age = 18,25
+sex = M
+wish-sex = F
+role = False
+adult = True
+
+[client/client-2-F]
+token = YOUR_FEMALE_CLIENT_TOKEN_HERE
+ua = YOUR_USER_AGENT_HERE
+age = 18,25
+wish-age = 18,25
+sex = F
+wish-sex = M
+role = False
+adult = True
+
+#Дальше может быть сколько угодно клиентов, главное чтобы их количество было четным

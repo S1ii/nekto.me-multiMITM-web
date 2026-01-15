@@ -1,0 +1,8 @@
+python-socketio==5.11.0
+python-engineio==4.9.0
+structlog==25.4.0
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+python-multipart
+websockets>=12.0
