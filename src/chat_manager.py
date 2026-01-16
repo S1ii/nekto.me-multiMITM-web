@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional
 from src.client import Client
+from src.config import get_auto_search
 from src.utils import generate_random_id
 import structlog
 import asyncio
@@ -67,10 +68,12 @@ class ChatManager:
     def create_room(self, client_m: Client, client_f: Client) -> DialogRoom:
         """Создает новую комнату для диалога"""
         room_id = generate_random_id()
+        is_paused = not get_auto_search()
         room = DialogRoom(
             id=room_id,
             client_m=client_m,
-            client_f=client_f
+            client_f=client_f,
+            is_paused=is_paused
         )
         self.rooms[room_id] = room
         
@@ -105,6 +108,12 @@ class ChatManager:
             await self._broadcast_message(room, system_msg)
             
             await client.search()
+            await self._broadcast_room_update(room)
+        elif client.sex_in_room == 'M' and room.is_paused:
+             # Если поиск отключен, сообщаем об этом
+            system_msg = self._create_system_message(f"Auto-search disabled. Waiting for manual start.")
+            room.messages.append(system_msg)
+            await self._broadcast_message(room, system_msg)
             await self._broadcast_room_update(room)
     
     async def _on_dialog_opened(self, data: Dict, client: Client, room: DialogRoom):

@@ -1,5 +1,6 @@
 [settings]
 clients = client-1-M client-2-F # обязательно сохраняйте чередование M/F клиентов
+auto_search = true
 # debug = False # True or False
 
 [client/client-1-M]

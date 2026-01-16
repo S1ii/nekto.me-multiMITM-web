@@ -16,6 +16,10 @@ def get_debug():
     else:
         structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(logging.WARNING))
 
+def get_auto_search() -> bool:
+    config = get_config()
+    return config.getboolean("settings", "auto_search", fallback=True)
+
 def get_clients():
     config = get_config()
     clients = config.get("settings", "clients").split()
