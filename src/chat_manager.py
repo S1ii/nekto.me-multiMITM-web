@@ -19,6 +19,11 @@ class DialogRoom:
     start_time: datetime = field(default_factory=datetime.now)
     is_active: bool = False
     manual_control: Optional[str] = None  # 'M' or 'F' - кто под ручным управлением
+    is_paused: bool = False  # Поиск приостановлен
+    
+    def get_user_messages_count(self) -> int:
+        """Возвращает количество только пользовательских сообщений (без system)"""
+        return sum(1 for msg in self.messages if msg.get('from') in ('M', 'F'))
     
     def get_controlled_client(self) -> Optional[Client]:
         if self.manual_control == 'M':
@@ -93,8 +98,8 @@ class ChatManager:
     
     async def _on_auth(self, data: Dict, client: Client, room: DialogRoom):
         """Обработка авторизации клиента"""
-        # Только мужской клиент начинает поиск
-        if client.sex_in_room == 'M':
+        # Только мужской клиент начинает поиск (если не на паузе)
+        if client.sex_in_room == 'M' and not room.is_paused:
             system_msg = self._create_system_message(f"{client.sex_in_room} searching...")
             room.messages.append(system_msg)
             await self._broadcast_message(room, system_msg)
@@ -223,14 +228,15 @@ class ChatManager:
         if hasattr(client, 'dialog_id'):
             delattr(client, 'dialog_id')
         
-        # Запускаем поиск только для M
+        # Запускаем поиск только для M (если не на паузе)
         # F начнет поиск автоматически когда M найдет диалог (в _on_dialog_opened)
-        await asyncio.sleep(1)
-        
-        search_msg_m = self._create_system_message("M searching...")
-        room.messages.append(search_msg_m)
-        await self._broadcast_message(room, search_msg_m)
-        await room.client_m.search()
+        if not room.is_paused:
+            await asyncio.sleep(1)
+            
+            search_msg_m = self._create_system_message("M searching...")
+            room.messages.append(search_msg_m)
+            await self._broadcast_message(room, search_msg_m)
+            await room.client_m.search()
         
         await self._broadcast_room_update(room)
     
@@ -323,13 +329,14 @@ class ChatManager:
         
         await self._broadcast_room_update(room)
         
-        # Запускаем поиск только для M
-        await asyncio.sleep(1)
-        
-        search_msg_m = self._create_system_message("M searching...")
-        room.messages.append(search_msg_m)
-        await self._broadcast_message(room, search_msg_m)
-        await room.client_m.search()
+        # Запускаем поиск только для M (если не на паузе)
+        if not room.is_paused:
+            await asyncio.sleep(1)
+            
+            search_msg_m = self._create_system_message("M searching...")
+            room.messages.append(search_msg_m)
+            await self._broadcast_message(room, search_msg_m)
+            await room.client_m.search()
         
         await self._broadcast_room_update(room)
         return True
@@ -363,13 +370,61 @@ class ChatManager:
         
         await self._broadcast_room_update(room)
         
-        # Запускаем новый поиск только для M
-        await asyncio.sleep(1)
+        # Запускаем новый поиск только для M (если не на паузе)
+        if not room.is_paused:
+            await asyncio.sleep(1)
+            
+            search_msg_m = self._create_system_message("M searching...")
+            room.messages.append(search_msg_m)
+            await self._broadcast_message(room, search_msg_m)
+            await room.client_m.search()
         
-        search_msg_m = self._create_system_message("M searching...")
-        room.messages.append(search_msg_m)
-        await self._broadcast_message(room, search_msg_m)
-        await room.client_m.search()
+        await self._broadcast_room_update(room)
+        return True
+    
+    async def toggle_pause(self, room_id: str) -> bool:
+        """Переключение паузы поиска"""
+        room = self.rooms.get(room_id)
+        if not room:
+            return False
+        
+        room.is_paused = not room.is_paused
+        
+        if room.is_paused:
+            # Остановить поиск - закрыть все активные диалоги
+            system_msg = self._create_system_message("Search paused by admin")
+            room.messages.append(system_msg)
+            await self._broadcast_message(room, system_msg)
+            
+            # Если был активный диалог, сохраняем лог
+            if room.is_active:
+                self._save_room_log(room)
+            
+            room.is_active = False
+            room.manual_control = None
+            
+            # Закрываем диалоги если они были открыты
+            for client in [room.client_m, room.client_f]:
+                if hasattr(client, 'dialog_id'):
+                    try:
+                        payload = {"action": "anon.leaveDialog", "dialogId": client.dialog_id}
+                        await client.emit("action", data=payload)
+                    except:
+                        pass
+                    delattr(client, 'dialog_id')
+        else:
+            # Возобновить поиск
+            system_msg = self._create_system_message("Search resumed by admin")
+            room.messages.append(system_msg)
+            await self._broadcast_message(room, system_msg)
+            
+            # Запускаем поиск для M
+            await asyncio.sleep(0.5)
+            
+            search_msg_m = self._create_system_message("M searching...")
+            room.messages.append(search_msg_m)
+            await self._broadcast_message(room, search_msg_m)
+            await room.client_m.search()
         
         await self._broadcast_room_update(room)
         return True
@@ -410,7 +465,8 @@ class ChatManager:
             "room_id": room.id,
             "is_active": room.is_active,
             "manual_control": room.manual_control,
-            "messages_count": len(room.messages),
+            "messages_count": room.get_user_messages_count(),
+            "is_paused": room.is_paused,
             "m_connected": hasattr(room.client_m, 'id'),
             "f_connected": hasattr(room.client_f, 'id'),
             "m_in_dialog": hasattr(room.client_m, 'dialog_id'),
@@ -456,7 +512,8 @@ class ChatManager:
             "room_id": room.id,
             "is_active": room.is_active,
             "manual_control": room.manual_control,
-            "messages_count": len(room.messages),
+            "messages_count": room.get_user_messages_count(),
+            "is_paused": room.is_paused,
             "messages": room.messages[-50:],  # Последние 50 сообщений
             "start_time": room.start_time.isoformat() if room.is_active else None,
             "m_token": room.client_m.token[:10],
