@@ -50,6 +50,15 @@ class ChatManager:
         if not os.path.exists(self.logs_directory):
             os.makedirs(self.logs_directory)
     
+    def _create_system_message(self, message: str) -> dict:
+        """Создает системное сообщение"""
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "from": "system",
+            "message": message,
+            "is_manual": False
+        }
+    
     def create_room(self, client_m: Client, client_f: Client) -> DialogRoom:
         """Создает новую комнату для диалога"""
         room_id = generate_random_id()
@@ -86,13 +95,7 @@ class ChatManager:
         """Обработка авторизации клиента"""
         # Только мужской клиент начинает поиск
         if client.sex_in_room == 'M':
-            # Системное сообщение о начале поиска
-            system_msg = {
-                "timestamp": datetime.now().isoformat(),
-                "from": "system",
-                "message": f"{client.sex_in_room} searching...",
-                "is_manual": False
-            }
+            system_msg = self._create_system_message(f"{client.sex_in_room} searching...")
             room.messages.append(system_msg)
             await self._broadcast_message(room, system_msg)
             
@@ -106,12 +109,7 @@ class ChatManager:
         room.messages = []  # Очищаем при новом диалоге
         
         # Системное сообщение
-        system_msg = {
-            "timestamp": datetime.now().isoformat(),
-            "from": "system",
-            "message": f"{client.sex_in_room} found dialog",
-            "is_manual": False
-        }
+        system_msg = self._create_system_message(f"{client.sex_in_room} found dialog")
         room.messages.append(system_msg)
         await self._broadcast_message(room, system_msg)
         
@@ -119,13 +117,7 @@ class ChatManager:
         if client.sex_in_room == 'M':
             other_client = room.client_f
             if not hasattr(other_client, 'dialog_id'):
-                # Системное сообщение о начале поиска F
-                search_msg_f = {
-                    "timestamp": datetime.now().isoformat(),
-                    "from": "system",
-                    "message": "F searching...",
-                    "is_manual": False
-                }
+                search_msg_f = self._create_system_message("F searching...")
                 room.messages.append(search_msg_f)
                 await self._broadcast_message(room, search_msg_f)
                 await other_client.search()
@@ -203,12 +195,9 @@ class ChatManager:
         
         # Если мы под ручным управлением и закрылся НЕ наш клиент — игнорируем
         if room.manual_control and room.manual_control != closer_sex:
-            system_msg = {
-                "timestamp": datetime.now().isoformat(),
-                "from": "system",
-                "message": f"Interlocutor for {closer_sex} left. Your dialog ({room.manual_control}) stays active.",
-                "is_manual": False
-            }
+            system_msg = self._create_system_message(
+                f"Interlocutor for {closer_sex} left. Your dialog ({room.manual_control}) stays active."
+            )
             room.messages.append(system_msg)
             await self._broadcast_message(room, system_msg)
             # Важно: НЕ закрываем диалог у other_client и НЕ сбрасываем room.is_active
@@ -216,12 +205,7 @@ class ChatManager:
 
         # В остальных случаях (ручное управление не включено или закрыл наш подконтрольный) — закрываем всё
         if room.is_active:
-            system_msg = {
-                "timestamp": datetime.now().isoformat(),
-                "from": "system",
-                "message": f"{closer_sex} closed dialog",
-                "is_manual": False
-            }
+            system_msg = self._create_system_message(f"{closer_sex} closed dialog")
             room.messages.append(system_msg)
             await self._broadcast_message(room, system_msg)
             
@@ -243,13 +227,7 @@ class ChatManager:
         # F начнет поиск автоматически когда M найдет диалог (в _on_dialog_opened)
         await asyncio.sleep(1)
         
-        # Системное сообщение о начале поиска M
-        search_msg_m = {
-            "timestamp": datetime.now().isoformat(),
-            "from": "system",
-            "message": "M searching...",
-            "is_manual": False
-        }
+        search_msg_m = self._create_system_message("M searching...")
         room.messages.append(search_msg_m)
         await self._broadcast_message(room, search_msg_m)
         await room.client_m.search()
@@ -300,15 +278,9 @@ class ChatManager:
         other_client = room.client_f if sex == 'M' else room.client_m
         
         if room.manual_control == sex:
-            # Выключаем ручное управление - это уже не нужно, т.к. кнопки будут скрыты
-            # Пока оставим для обратной совместимости
+            # Выключаем ручное управление
             room.manual_control = None
-            system_msg = {
-                "timestamp": datetime.now().isoformat(),
-                "from": "system",
-                "message": f"{sex} bot enabled",
-                "is_manual": False
-            }
+            system_msg = self._create_system_message(f"{sex} bot enabled")
         else:
             # Включаем ручное управление
             room.manual_control = sex
@@ -319,12 +291,9 @@ class ChatManager:
                 await other_client.emit("action", data=payload)
                 delattr(other_client, 'dialog_id')
             
-            system_msg = {
-                "timestamp": datetime.now().isoformat(),
-                "from": "system",
-                "message": f"{sex} manual control enabled. {other_client.sex_in_room} dialog closed.",
-                "is_manual": False
-            }
+            system_msg = self._create_system_message(
+                f"{sex} manual control enabled. {other_client.sex_in_room} dialog closed."
+            )
         
         room.messages.append(system_msg)
         await self._broadcast_message(room, system_msg)
@@ -337,13 +306,7 @@ class ChatManager:
         if not room or not room.is_active:
             return False
         
-        # Системное сообщение о принудительном закрытии
-        system_msg = {
-            "timestamp": datetime.now().isoformat(),
-            "from": "system",
-            "message": "Dialog force closed by admin",
-            "is_manual": False
-        }
+        system_msg = self._create_system_message("Dialog force closed by admin")
         room.messages.append(system_msg)
         await self._broadcast_message(room, system_msg)
         
@@ -356,21 +319,14 @@ class ChatManager:
             if hasattr(client, 'dialog_id'):
                 payload = {"action": "anon.leaveDialog", "dialogId": client.dialog_id}
                 await client.emit("action", data=payload)
-                delattr(client, 'dialog_id')  # Удаляем dialog_id чтобы клиент мог начать новый поиск
+                delattr(client, 'dialog_id')
         
         await self._broadcast_room_update(room)
         
         # Запускаем поиск только для M
-        # F начнет поиск автоматически когда M найдет диалог (в _on_dialog_opened)
         await asyncio.sleep(1)
         
-        # Системное сообщение о начале поиска M
-        search_msg_m = {
-            "timestamp": datetime.now().isoformat(),
-            "from": "system",
-            "message": "M searching...",
-            "is_manual": False
-        }
+        search_msg_m = self._create_system_message("M searching...")
         room.messages.append(search_msg_m)
         await self._broadcast_message(room, search_msg_m)
         await room.client_m.search()
@@ -384,13 +340,7 @@ class ChatManager:
         if not room:
             return False
         
-        # Системное сообщение о перезапуске
-        system_msg = {
-            "timestamp": datetime.now().isoformat(),
-            "from": "system",
-            "message": "Search restarted by admin",
-            "is_manual": False
-        }
+        system_msg = self._create_system_message("Search restarted by admin")
         room.messages.append(system_msg)
         await self._broadcast_message(room, system_msg)
         
@@ -408,22 +358,15 @@ class ChatManager:
                     payload = {"action": "anon.leaveDialog", "dialogId": client.dialog_id}
                     await client.emit("action", data=payload)
                 except:
-                    pass  # Игнорируем ошибки если диалог уже закрыт
+                    pass
                 delattr(client, 'dialog_id')
         
         await self._broadcast_room_update(room)
         
         # Запускаем новый поиск только для M
-        # F начнет поиск автоматически когда M найдет диалог
         await asyncio.sleep(1)
         
-        # Системное сообщение о начале поиска M
-        search_msg_m = {
-            "timestamp": datetime.now().isoformat(),
-            "from": "system",
-            "message": "M searching...",
-            "is_manual": False
-        }
+        search_msg_m = self._create_system_message("M searching...")
         room.messages.append(search_msg_m)
         await self._broadcast_message(room, search_msg_m)
         await room.client_m.search()
