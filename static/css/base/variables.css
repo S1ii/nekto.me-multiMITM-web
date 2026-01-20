@@ -1,0 +1,65 @@
+/* ============================================
+   CSS Variables & Design Tokens
+   Original Premium Dark Theme
+   ============================================ */
+
+:root {
+    /* Background colors */
+    --bg-primary: #121212;
+    --bg-secondary: #1f1f1f;
+    --bg-tertiary: #2a2a2a;
+    --bg-hover: #353535;
+
+    /* Border */
+    --border: #404040;
+    --border-hover: #525252;
+
+    /* Text colors */
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --text-tertiary: #6b6b6b;
+
+    /* Accent colors */
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-glow: rgba(37, 99, 235, 0.2);
+
+    /* Status colors */
+    --success: #10b981;
+    --success-glow: transparent;
+    --warning: #f59e0b;
+    --warning-glow: transparent;
+    --danger: #ef4444;
+    --danger-glow: transparent;
+
+    /* Gender colors */
+    --male: #3b82f6;
+    --male-gradient: #1e40af;
+    --male-hover: #1e40af;
+    --female: #ec4899;
+    --female-gradient: #9d174d;
+
+    /* Flat Glass (reduced blur/transparency) */
+    --glass-blur: 0px;
+    --glass-bg: #1e1e1e;
+    --glass-border: #404040;
+    --glass-highlight: #525252;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+    --shadow-glow: none;
+
+    /* Transitions */
+    --transition-fast: 0.1s ease;
+    --transition-normal: 0.2s ease;
+    --transition-slow: 0.3s ease;
+
+    /* Border radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-full: 9999px;
+}

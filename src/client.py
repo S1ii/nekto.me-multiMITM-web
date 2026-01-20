@@ -3,6 +3,8 @@ from socketio import AsyncClient
 from typing import Callable, Dict, Any, List, Self, Literal
 from src.utils import generate_webagent
 
+import aiohttp
+from aiohttp.resolver import ThreadedResolver
 import structlog
 import time
 import logging
@@ -128,13 +130,51 @@ class Client(AsyncClient):
         self.get_logger().debug(f"Found {len(handlers)} handler(s)!")
         return handlers
     
-    async def search(self) -> None:
+    def is_connected(self) -> bool:
+        """Проверяет, подключен ли клиент к Socket.IO серверу"""
+        return self.connected and hasattr(self, 'id')
+    
+    async def safe_emit(self, event: str, data: dict = None) -> bool:
+        """Безопасная отправка события с проверкой подключения и автоматическим переподключением"""
+        import asyncio
+        
+        if not self.connected:
+            self.get_logger().warning("Клиент отключен, пытаемся переподключиться...")
+            try:
+                await self.connect(max_retries=3, retry_delay=2)
+            except Exception as e:
+                self.get_logger().error(f"Не удалось переподключиться: {e}")
+                return False
+        
+        try:
+            await self.emit(event, data=data)
+            return True
+        except Exception as e:
+            error_msg = str(e)
+            self.get_logger().warning(f"Ошибка при отправке: {error_msg}")
+            
+            # Если соединение потеряно, пробуем переподключиться
+            if "not a connected namespace" in error_msg or "packet queue is empty" in error_msg.lower():
+                self.get_logger().warning("Соединение потеряно, переподключаемся...")
+                try:
+                    await asyncio.sleep(1)
+                    await self.connect(max_retries=3, retry_delay=2)
+                    # Повторяем отправку после переподключения
+                    await self.emit(event, data=data)
+                    return True
+                except Exception as reconnect_error:
+                    self.get_logger().error(f"Не удалось переподключиться: {reconnect_error}")
+                    return False
+            return False
+
+    async def search(self) -> bool:
+        """Запуск поиска. Возвращает True если успешно."""
         payload = {
             "action":"search.run"
         }
         payload.update(self.search_parameters)
         self.get_logger().debug("Searching with search parameters", payload=payload)
-        await self.emit("action", data=payload)
+        return await self.safe_emit("action", data=payload)
 
     async def on_disconnect(self) -> None:
         self.get_logger().debug(f"User has disconnected! token={self.token[:6]}, ua={self.ua[:6]}")
@@ -157,12 +197,22 @@ class Client(AsyncClient):
         """Подключение с автоматическими повторными попытками"""
         import asyncio
         
+        # Use ThreadedResolver for proper DNS resolution on Windows
+        resolver = ThreadedResolver()
+        connector = aiohttp.TCPConnector(resolver=resolver)
+        http_session = aiohttp.ClientSession(connector=connector)
+        self.http = http_session
+        self.eio.http = http_session
+        
         for attempt in range(1, max_retries + 1):
             try:
                 self.get_logger().info(f"Попытка подключения {attempt}/{max_retries}...")
                 await super().connect(
                     url=self.addr, 
-                    headers={"User-Agent":self.ua}, 
+                    headers={
+                        "User-Agent": self.ua,
+                        "Origin": "https://nekto.me",
+                    }, 
                     transports=["websocket"],
                 )
                 self.get_logger().info("Успешно подключено!")

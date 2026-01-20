@@ -24,3 +24,28 @@ role = False
 adult = True
 
 #Дальше может быть сколько угодно клиентов, главное чтобы их количество было четным
+
+
+# ============================================
+# Audio MITM (nekto.me/audiochat)
+# ============================================
+
+[audio]
+clients = audio-1 audio-2
+
+[audio/client/audio-1]
+user_id = YOUR_AUDIO_TOKEN_1
+ua = YOUR_USER_AGENT_HERE
+sex = MALE
+search-sex = FEMALE
+age = 18,25
+search-age = 18,25
+# wait-for = audio-2
+
+[audio/client/audio-2]
+user_id = YOUR_AUDIO_TOKEN_2
+ua = YOUR_USER_AGENT_HERE
+sex = FEMALE
+search-sex = MALE
+age = 18,25
+search-age = 18,25

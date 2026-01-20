@@ -118,6 +118,16 @@ class ChatManager:
     
     async def _on_dialog_opened(self, data: Dict, client: Client, room: DialogRoom):
         """Диалог открыт"""
+        # ВАЖНО: Если пауза - не активируем диалог
+        if room.is_paused:
+            # Закрываем диалог так как мы на паузе
+            if hasattr(client, 'dialog_id'):
+                payload = {"action": "anon.leaveDialog", "dialogId": client.dialog_id}
+                if client.is_connected():
+                    await client.safe_emit("action", data=payload)
+                delattr(client, 'dialog_id')
+            return
+        
         room.is_active = True
         room.start_time = datetime.now()
         room.messages = []  # Очищаем при новом диалоге
@@ -127,8 +137,8 @@ class ChatManager:
         room.messages.append(system_msg)
         await self._broadcast_message(room, system_msg)
         
-        # Если мужской клиент нашел диалог, запускаем поиск для женского
-        if client.sex_in_room == 'M':
+        # Если мужской клиент нашел диалог, запускаем поиск для женского (если не на паузе)
+        if client.sex_in_room == 'M' and not room.is_paused:
             other_client = room.client_f
             if not hasattr(other_client, 'dialog_id'):
                 search_msg_f = self._create_system_message("F searching...")
@@ -149,7 +159,7 @@ class ChatManager:
             "dialogId": client.dialog_id,
             "lastMessageId": data.get("id")
         }
-        await client.emit("action", payload)
+        await client.safe_emit("action", payload)
         
         # ВАЖНО: Обрабатываем сообщение только если это НЕ наш собственный клиент
         # Это предотвращает дублирование - каждое сообщение обрабатывается только получателем
@@ -175,7 +185,7 @@ class ChatManager:
         # КЛЮЧЕВАЯ ЛОГИКА: Пересылаем только если другой клиент НЕ под ручным управлением
         # Если под ручным управлением - сообщения идут только в UI, бот не отвечает
         if room.manual_control != other_client.sex_in_room:
-            if hasattr(other_client, 'dialog_id'):
+            if hasattr(other_client, 'dialog_id') and other_client.is_connected():
                 payload = {
                     "action": "anon.message",
                     "dialogId": other_client.dialog_id,
@@ -183,7 +193,7 @@ class ChatManager:
                     "message": message,
                     "fileId": None,
                 }
-                await other_client.emit("action", data=payload)
+                await other_client.safe_emit("action", data=payload)
         
         # Отправляем обновление в UI ОДИН раз (всегда показываем входящие)
         await self._broadcast_message(room, message_entry)
@@ -192,14 +202,14 @@ class ChatManager:
         """Обработка индикатора печати"""
         other_client = room.client_f if client.sex_in_room == 'M' else room.client_m
         
-        if hasattr(other_client, 'dialog_id'):
+        if hasattr(other_client, 'dialog_id') and other_client.is_connected():
             payload = {
                 "action": "dialog.setTyping",
                 "dialogId": other_client.dialog_id,
                 "voice": data.get("voice"),
                 "typing": data.get("typing")
             }
-            await other_client.emit("action", data=payload)
+            await other_client.safe_emit("action", data=payload)
     
     async def _on_dialog_closed(self, data: Dict, client: Client, room: DialogRoom):
         """Диалог закрыт"""
@@ -230,7 +240,8 @@ class ChatManager:
         # Закрываем диалог у другого клиента
         if hasattr(other_client, 'dialog_id'):
             payload = {"action": "anon.leaveDialog", "dialogId": other_client.dialog_id}
-            await other_client.emit("action", data=payload)
+            if other_client.is_connected():
+                await other_client.safe_emit("action", data=payload)
             delattr(other_client, 'dialog_id')
         
         # Удаляем dialog_id у клиента, который закрыл
@@ -260,6 +271,11 @@ class ChatManager:
         if not hasattr(client, 'dialog_id'):
             return False
         
+        # Проверяем подключение перед отправкой
+        if not client.is_connected():
+            self.logger.warning(f"Клиент {sex} не подключен, сообщение не отправлено")
+            return False
+        
         payload = {
             "action": "anon.message",
             "dialogId": client.dialog_id,
@@ -267,7 +283,9 @@ class ChatManager:
             "message": message,
             "fileId": None,
         }
-        await client.emit("action", data=payload)
+        success = await client.safe_emit("action", data=payload)
+        if not success:
+            return False
         
         # Записываем сообщение
         message_entry = {
@@ -303,7 +321,8 @@ class ChatManager:
             # Закрываем диалог у другого клиента (который НЕ под управлением)
             if hasattr(other_client, 'dialog_id'):
                 payload = {"action": "anon.leaveDialog", "dialogId": other_client.dialog_id}
-                await other_client.emit("action", data=payload)
+                if other_client.is_connected():
+                    await other_client.safe_emit("action", data=payload)
                 delattr(other_client, 'dialog_id')
             
             system_msg = self._create_system_message(
@@ -333,7 +352,8 @@ class ChatManager:
         for client in [room.client_m, room.client_f]:
             if hasattr(client, 'dialog_id'):
                 payload = {"action": "anon.leaveDialog", "dialogId": client.dialog_id}
-                await client.emit("action", data=payload)
+                if client.is_connected():
+                    await client.safe_emit("action", data=payload)
                 delattr(client, 'dialog_id')
         
         await self._broadcast_room_update(room)
@@ -370,11 +390,9 @@ class ChatManager:
         # Закрываем диалоги если они были открыты
         for client in [room.client_m, room.client_f]:
             if hasattr(client, 'dialog_id'):
-                try:
+                if client.is_connected():
                     payload = {"action": "anon.leaveDialog", "dialogId": client.dialog_id}
-                    await client.emit("action", data=payload)
-                except:
-                    pass
+                    await client.safe_emit("action", data=payload)
                 delattr(client, 'dialog_id')
         
         await self._broadcast_room_update(room)
@@ -412,14 +430,21 @@ class ChatManager:
             room.is_active = False
             room.manual_control = None
             
-            # Закрываем диалоги если они были открыты
+            # Отменяем активный поиск и закрываем диалоги
             for client in [room.client_m, room.client_f]:
-                if hasattr(client, 'dialog_id'):
+                # Отменяем поиск если он активен
+                if client.is_connected():
                     try:
-                        payload = {"action": "anon.leaveDialog", "dialogId": client.dialog_id}
-                        await client.emit("action", data=payload)
-                    except:
+                        payload = {"action": "search.stop"}
+                        await client.safe_emit("action", data=payload)
+                    except Exception:
                         pass
+                
+                # Закрываем диалог если он был открыт
+                if hasattr(client, 'dialog_id'):
+                    if client.is_connected():
+                        payload = {"action": "anon.leaveDialog", "dialogId": client.dialog_id}
+                        await client.safe_emit("action", data=payload)
                     delattr(client, 'dialog_id')
         else:
             # Возобновить поиск
@@ -536,3 +561,48 @@ class ChatManager:
     def get_all_rooms_status(self) -> List[dict]:
         """Получение статуса всех комнат"""
         return [self.get_room_status(room_id) for room_id in self.rooms.keys()]
+    
+    async def stop_all_searches(self):
+        """Остановка всех поисков во всех комнатах"""
+        self.logger.info("Stopping all searches...")
+        
+        for room in self.rooms.values():
+            if room.is_active:
+                # Закрываем активные диалоги
+                for client in [room.client_m, room.client_f]:
+                    if hasattr(client, 'dialog_id') and client.is_connected():
+                        try:
+                            payload = {"action": "anon.leaveDialog", "dialogId": client.dialog_id}
+                            await client.safe_emit("action", data=payload)
+                        except Exception as e:
+                            self.logger.error(f"Error leaving dialog: {e}")
+                        
+                        if hasattr(client, 'dialog_id'):
+                            delattr(client, 'dialog_id')
+                
+                # Сохраняем лог если были сообщения
+                if room.messages:
+                    self._save_room_log(room)
+            
+            room.is_active = False
+            room.is_paused = True
+        
+        self.logger.info("All searches stopped")
+    
+    async def disconnect_all(self):
+        """Отключение всех клиентов"""
+        self.logger.info("Disconnecting all clients...")
+        
+        clients_to_disconnect = set()
+        for room in self.rooms.values():
+            clients_to_disconnect.add(room.client_m)
+            clients_to_disconnect.add(room.client_f)
+        
+        for client in clients_to_disconnect:
+            try:
+                if client.is_connected():
+                    await client.disconnect()
+            except Exception as e:
+                self.logger.error(f"Error disconnecting client {client.token[:10]}: {e}")
+        
+        self.logger.info(f"Disconnected {len(clients_to_disconnect)} clients")

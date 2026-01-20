@@ -1,0 +1,129 @@
+/* ============================================
+   Badges & Status Indicators
+   ============================================ */
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: var(--radius-md);
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+/* Active status */
+.status-active {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--success);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.status-active .status-dot {
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+}
+
+/* Paused status */
+.status-paused {
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.status-paused .status-dot {
+    background: #a78bfa;
+}
+
+/* Waiting/Searching status */
+.status-waiting {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    animation: pulse 2s infinite;
+}
+
+.status-waiting .status-dot {
+    background: var(--warning);
+}
+
+/* Offline status */
+.status-offline {
+    background: var(--bg-tertiary);
+    color: var(--text-tertiary);
+    border: 1px solid var(--border);
+}
+
+.status-offline .status-dot {
+    background: var(--text-tertiary);
+}
+
+/* Message count badge */
+.msg-count {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
+
+.msg-count svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Connection indicators */
+.connection-status {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.conn-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-family: "JetBrains Mono", monospace;
+}
+
+.conn-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.conn-online {
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+}
+
+.conn-offline {
+    background: var(--danger);
+}
+
+/* Manual badge */
+.manual-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: rgba(139, 92, 246, 0.2);
+    color: #a78bfa;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+}
+
+.manual-badge svg {
+    width: 10px;
+    height: 10px;
+}

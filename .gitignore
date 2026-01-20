@@ -1,5 +1,6 @@
 # Logs directory
 chat_logs/
+audio_logs/
 *.log
 
 # Python cache
@@ -42,3 +43,16 @@ Thumbs.db
 
 # skills
 skills/
+
+# Whoosh search index
+search_index/
+
+# Other project files
+mitm-nekto-audio-main/
+
+# Node.js (if used for testing)
+node_modules/
+package-lock.json
+
+# Agent files
+.agent/
