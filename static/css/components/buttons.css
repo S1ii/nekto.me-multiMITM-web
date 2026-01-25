@@ -67,52 +67,52 @@
     color: var(--text-primary);
 }
 
-/* Success button */
+/* Success button - soft mint green (resume, positive action) */
 .btn-success {
-    background: linear-gradient(135deg, var(--success), #16a34a);
-    color: white;
+    background: linear-gradient(135deg, #7dd3b8, #5ec4a0);
+    color: #1a3d2e;
     border: none;
 }
 
 .btn-success:hover:not(:disabled) {
-    background: linear-gradient(135deg, #16a34a, #15803d);
-    box-shadow: 0 4px 16px var(--success-glow);
+    background: linear-gradient(135deg, #5ec4a0, #4db58f);
+    box-shadow: 0 4px 16px rgba(125, 211, 184, 0.35);
 }
 
-/* Warning button */
+/* Warning button - soft amber/peach (restart, caution) */
 .btn-warning {
-    background: linear-gradient(135deg, var(--warning), #d97706);
-    color: white;
+    background: linear-gradient(135deg, #f0c78a, #e5b56e);
+    color: #4a3520;
     border: none;
 }
 
 .btn-warning:hover:not(:disabled) {
-    background: linear-gradient(135deg, #d97706, #b45309);
-    box-shadow: 0 4px 16px var(--warning-glow);
+    background: linear-gradient(135deg, #e5b56e, #daa655);
+    box-shadow: 0 4px 16px rgba(240, 199, 138, 0.35);
 }
 
-/* Danger button */
+/* Danger button - soft coral (close, stop) */
 .btn-danger {
-    background: linear-gradient(135deg, var(--danger), #dc2626);
-    color: white;
+    background: linear-gradient(135deg, #f0a0a0, #e88888);
+    color: #4a2020;
     border: none;
 }
 
 .btn-danger:hover:not(:disabled) {
-    background: linear-gradient(135deg, #dc2626, #b91c1c);
-    box-shadow: 0 4px 16px var(--danger-glow);
+    background: linear-gradient(135deg, #e88888, #df7070);
+    box-shadow: 0 4px 16px rgba(240, 160, 160, 0.35);
 }
 
-/* Pause button */
+/* Pause button - soft lavender (pause, wait) */
 .btn-pause {
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-    color: white;
+    background: linear-gradient(135deg, #b8a8d8, #a090c8);
+    color: #2d2540;
     border: none;
 }
 
 .btn-pause:hover:not(:disabled) {
-    background: linear-gradient(135deg, #7c3aed, #6d28d9);
-    box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+    background: linear-gradient(135deg, #a090c8, #9080b8);
+    box-shadow: 0 4px 16px rgba(184, 168, 216, 0.35);
 }
 
 /* Manual control button */

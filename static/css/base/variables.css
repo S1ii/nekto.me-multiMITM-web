@@ -1,63 +1,102 @@
 /* ============================================
    CSS Variables & Design Tokens
-   Original Premium Dark Theme
+   Theme: Graphite Pro (Timeless Neutral)
    ============================================ */
 
 :root {
-    /* Background colors */
-    --bg-primary: #121212;
-    --bg-secondary: #1f1f1f;
-    --bg-tertiary: #2a2a2a;
-    --bg-hover: #353535;
+    /* BACKGROUNDS
+       Используем шкалу Zinc — это нейтральный серый, без "синевы" или "грязи".
+       Очень глубокий, матовый цвет, от которого не устают глаза.
+    */
+    --bg-primary: #09090b;
+    /* Основной фон (почти черный, Zinc 950) */
+    --bg-secondary: #18181b;
+    /* Карточки / Панели (Zinc 900) */
+    --bg-tertiary: #27272a;
+    /* Поля ввода / Второстепенные элементы (Zinc 800) */
+    --bg-hover: #3f3f46;
+    /* Ховер (Zinc 700) */
 
-    /* Border */
-    --border: #404040;
-    --border-hover: #525252;
+    /* BORDERS
+       Тонкие, едва заметные границы для структуры. 
+    */
+    --border: #27272a;
+    /* Совпадает с третичным фоном для мягкости */
+    --border-hover: #52525b;
+    /* Чуть светлее при наведении */
 
-    /* Text colors */
-    --text-primary: #e0e0e0;
-    --text-secondary: #a0a0a0;
-    --text-tertiary: #6b6b6b;
+    /* TYPOGRAPHY
+       Чистый белый для заголовков, спокойный серый для остального.
+    */
+    --text-primary: #fafafa;
+    /* Zinc 50 */
+    --text-secondary: #a1a1aa;
+    /* Zinc 400 - классический серый текст */
+    --text-tertiary: #71717a;
+    /* Zinc 500 - для мета-информации */
 
-    /* Accent colors */
-    --accent: #2563eb;
-    --accent-hover: #1d4ed8;
-    --accent-glow: rgba(37, 99, 235, 0.2);
+    /* ACCENT
+       Спокойный, профессиональный синий (Inter Blue).
+       Не неоновый, но достаточно заметный для активных действий.
+    */
+    --accent: #3b82f6;
+    /* Blue 500 */
+    --accent-hover: #2563eb;
+    /* Blue 600 */
+    --accent-glow: rgba(59, 130, 246, 0.15);
+    /* Очень деликатное свечение */
 
-    /* Status colors */
+    /* STATUS COLORS
+       Пастельные, приглушенные тона, чтобы не "кричали" в интерфейсе.
+    */
     --success: #10b981;
-    --success-glow: transparent;
+    /* Emerald 500 */
+    --success-glow: rgba(16, 185, 129, 0.1);
     --warning: #f59e0b;
-    --warning-glow: transparent;
+    /* Amber 500 */
+    --warning-glow: rgba(245, 158, 11, 0.1);
     --danger: #ef4444;
-    --danger-glow: transparent;
+    /* Red 500 */
+    --danger-glow: rgba(239, 68, 68, 0.1);
 
-    /* Gender colors */
-    --male: #3b82f6;
-    --male-gradient: #1e40af;
-    --male-hover: #1e40af;
-    --female: #ec4899;
-    --female-gradient: #9d174d;
+    /* GENDER COLORS
+       Спокойные, различимые, но не "детские".
+    */
+    --male: #60a5fa;
+    /* Blue 400 */
+    --male-gradient: #3b82f6;
+    --male-hover: #2563eb;
+    --female: #f472b6;
+    /* Pink 400 */
+    --female-gradient: #ec4899;
 
-    /* Flat Glass (reduced blur/transparency) */
-    --glass-blur: 0px;
-    --glass-bg: #1e1e1e;
-    --glass-border: #404040;
-    --glass-highlight: #525252;
+    /* GLASS EFFECT
+       Минималистичное стекло, без "мыла".
+    */
+    --glass-blur: 8px;
+    --glass-bg: rgba(24, 24, 27, 0.8);
+    /* Полупрозрачный вторичный фон */
+    --glass-border: rgba(255, 255, 255, 0.08);
+    /* Едва заметная белая обводка */
+    --glass-highlight: rgba(255, 255, 255, 0.03);
 
-    /* Shadows */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+    /* SHADOWS
+       Мягкие, глубокие тени для объема.
+    */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
     --shadow-glow: none;
+    /* Убрали лишнее свечение для строгости */
 
-    /* Transitions */
-    --transition-fast: 0.1s ease;
-    --transition-normal: 0.2s ease;
+    /* TRANSITIONS & RADIUS
+       Стандартные значения.
+    */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-slow: 0.3s ease;
 
-    /* Border radius */
-    --radius-sm: 4px;
+    --radius-sm: 6px;
     --radius-md: 8px;
     --radius-lg: 12px;
     --radius-xl: 16px;

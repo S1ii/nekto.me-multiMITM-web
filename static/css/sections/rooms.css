@@ -7,7 +7,7 @@
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--border);
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-lg);
     overflow: hidden;
     transition: all var(--transition-normal);
     box-shadow: var(--shadow-md);
@@ -16,137 +16,151 @@
 .room-card:hover {
     border-color: var(--border-hover);
     box-shadow: var(--shadow-lg), var(--shadow-glow);
-    transform: translateY(-2px);
 }
 
-/* Room Header - Two Row Layout */
+/* Room Header - Single Row Compact Layout */
 .room-header {
-    padding: 12px 16px;
+    padding: 14px 16px;
     border-bottom: 1px solid var(--border);
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background: rgba(0, 0, 0, 0.2);
-}
-
-.room-header-top {
-    display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: center;
+    gap: 12px;
+    background: var(--bg-secondary);
+    position: relative;
 }
 
-.room-header-bottom {
+.room-header-left {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    z-index: 1;
 }
 
-.room-info {
+.room-header-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    justify-content: center;
+}
+
+.room-header-right {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-shrink: 0;
+    z-index: 1;
 }
 
+/* Room ID - Compact monospace */
 .room-id {
-    display: flex;
-    align-items: center;
-    gap: 6px;
     font-size: 13px;
     color: var(--text-secondary);
     font-family: 'JetBrains Mono', monospace;
     background: var(--bg-tertiary);
-    padding: 5px 10px;
+    padding: 6px 10px;
     border-radius: var(--radius-sm);
-    letter-spacing: 0;
+    letter-spacing: -0.5px;
 }
 
-.room-id svg {
-    width: 12px;
-    height: 12px;
-    color: var(--accent);
-}
-
-/* Connection Status - Compact */
-.connection-status {
+/* Client Connection Badges */
+.room-clients {
     display: flex;
-    gap: 8px;
-    font-size: 10px;
-    color: var(--text-tertiary);
-}
-
-.conn-indicator {
-    display: flex;
-    align-items: center;
     gap: 6px;
 }
 
-.conn-dot {
+.client-badge {
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    transition: all var(--transition-fast);
+}
+
+/* M Badge */
+.client-badge.client-m {
+    background: rgba(56, 189, 248, 0.15);
+    color: var(--male);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+/* F Badge */
+.client-badge.client-f {
+    background: rgba(251, 113, 133, 0.15);
+    color: var(--female);
+    border: 1px solid rgba(251, 113, 133, 0.3);
+}
+
+/* State: Offline - Dimmed */
+.client-badge.offline {
+    opacity: 0.35;
+}
+
+/* State: Connected/Searching */
+.client-badge.connected {
+    opacity: 0.65;
+}
+
+/* State: Paused */
+.client-badge.paused {
+    opacity: 0.5;
+}
+
+/* State: Active/In Dialog - Bright with subtle glow */
+.client-badge.client-m.active {
+    opacity: 1;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+}
+
+.client-badge.client-f.active {
+    opacity: 1;
+    box-shadow: 0 0 8px rgba(251, 113, 133, 0.4);
+}
+
+/* Status Pill */
+.status-pill {
+    padding: 5px 14px;
+    border-radius: var(--radius-full);
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
 }
 
-.conn-online {
-    background: var(--success);
-}
-
-.conn-offline {
-    background: var(--danger);
-}
-
-/* Status Indicators */
-.status-indicators {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
-.status-badge {
-    padding: 4px 10px;
-    border-radius: var(--radius-sm);
-    font-size: 10px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: all var(--transition-fast);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
-
-.status-badge svg {
-    width: 14px;
-    height: 14px;
-}
-
-.status-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-}
-
 .status-active {
-    background: rgba(34, 197, 94, 0.15);
+    background: rgba(5, 150, 105, 0.2);
     color: var(--success);
-    border: 1px solid rgba(34, 197, 94, 0.3);
+    border: 1px solid rgba(5, 150, 105, 0.4);
 }
 
 .status-active .status-dot {
     background: var(--success);
-    box-shadow: 0 0 8px var(--success-glow);
     animation: pulse 2s infinite;
 }
 
-@keyframes pulse {
+.status-paused {
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
 
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.5;
-    }
+.status-paused .status-dot {
+    background: #a78bfa;
 }
 
 .status-waiting {
@@ -161,29 +175,74 @@
 }
 
 .status-offline {
-    background: rgba(239, 68, 68, 0.15);
-    color: var(--danger);
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: rgba(100, 116, 139, 0.15);
+    color: var(--text-tertiary);
+    border: 1px solid rgba(100, 116, 139, 0.3);
 }
 
 .status-offline .status-dot {
-    background: var(--danger);
+    background: var(--text-tertiary);
 }
 
-.status-paused {
-    background: rgba(139, 92, 246, 0.15);
-    color: #a78bfa;
-    border: 1px solid rgba(139, 92, 246, 0.3);
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
 }
 
-.status-paused .status-dot {
-    background: #a78bfa;
-}
-
-.msg-count {
-    background: var(--bg-tertiary);
+/* Message Counter */
+.msg-counter {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
     color: var(--text-secondary);
+    padding: 6px 10px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+}
+
+.msg-counter svg {
+    width: 14px;
+    height: 14px;
+    color: var(--accent);
+}
+
+.msg-count-value {
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Settings Button */
+.btn-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
     border: 1px solid var(--border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.btn-icon:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--border-hover);
+}
+
+.btn-icon svg {
+    width: 18px;
+    height: 18px;
 }
 
 /* Chat Area */
@@ -290,9 +349,9 @@
 }
 
 .message-f .message-bubble {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
+    background: var(--female-gradient);
+    color: white;
+    border: none;
     border-bottom-left-radius: 4px;
 }
 

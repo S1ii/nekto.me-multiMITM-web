@@ -337,45 +337,100 @@ async def get_logs(page: int = 1, limit: int = 50, sort: str = "newest"):
     # Get list of all log files
     all_files = glob.glob(os.path.join(LOGS_DIR, "*.json"))
     
-    # Sort files by modification time for consistent ordering
-    if sort == "newest":
-        all_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-    elif sort == "oldest":
-        all_files.sort(key=lambda x: os.path.getmtime(x))
-    
-    total = len(all_files)
-    total_pages = (total + limit - 1) // limit if total > 0 else 0
-    
-    # Paginate
-    start = (page - 1) * limit
-    end = start + limit
-    paginated_files = all_files[start:end]
-    
-    for filepath in paginated_files:
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            
-            filename = os.path.basename(filepath)
-            messages = data.get("messages", [])
-            
-            log_summary = {
-                "filename": filename,
-                "room_id": data.get("room_id", "unknown"),
-                "start_time": data.get("start_time"),
-                "end_time": data.get("end_time"),
-                "messages_count": data.get("messages_count", len(messages)),
-                "duration": data.get("duration", 0),
-                "file_size": os.path.getsize(filepath)
-            }
-            logs.append(log_summary)
-            
-        except (json.JSONDecodeError, IOError):
-            continue
-    
-    # Sort by messages count if requested (need to re-sort after loading)
-    if sort == "messages":
-        logs.sort(key=lambda x: x.get("messages_count", 0), reverse=True)
+    # For "messages" or "duration" sort, we need to load all metadata first
+    if sort in ("messages", "duration"):
+        # Load metadata for all files to sort globally
+        all_logs = []
+        for filepath in all_files:
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                
+                filename = os.path.basename(filepath)
+                messages = data.get("messages", [])
+                
+                # Calculate duration if not present
+                duration = data.get("duration", 0)
+                if duration == 0 and data.get("start_time") and data.get("end_time"):
+                    try:
+                        start = datetime.fromisoformat(data["start_time"])
+                        end = datetime.fromisoformat(data["end_time"])
+                        duration = int((end - start).total_seconds())
+                    except:
+                        duration = 0
+                
+                log_summary = {
+                    "filename": filename,
+                    "room_id": data.get("room_id", "unknown"),
+                    "start_time": data.get("start_time"),
+                    "end_time": data.get("end_time"),
+                    "messages_count": data.get("messages_count", len(messages)),
+                    "duration": duration,
+                    "file_size": os.path.getsize(filepath)
+                }
+                all_logs.append(log_summary)
+            except (json.JSONDecodeError, IOError):
+                continue
+        
+        # Sort globally by the requested field
+        if sort == "messages":
+            all_logs.sort(key=lambda x: x.get("messages_count", 0), reverse=True)
+        elif sort == "duration":
+            all_logs.sort(key=lambda x: x.get("duration", 0), reverse=True)
+        
+        total = len(all_logs)
+        total_pages = (total + limit - 1) // limit if total > 0 else 0
+        
+        # Paginate after sorting
+        start = (page - 1) * limit
+        end = start + limit
+        logs = all_logs[start:end]
+    else:
+        # For newest/oldest, sort files by modification time first
+        if sort == "newest":
+            all_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+        elif sort == "oldest":
+            all_files.sort(key=lambda x: os.path.getmtime(x))
+        
+        total = len(all_files)
+        total_pages = (total + limit - 1) // limit if total > 0 else 0
+        
+        # Paginate
+        start = (page - 1) * limit
+        end = start + limit
+        paginated_files = all_files[start:end]
+        
+        for filepath in paginated_files:
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                
+                filename = os.path.basename(filepath)
+                messages = data.get("messages", [])
+                
+                # Calculate duration if not present
+                duration = data.get("duration", 0)
+                if duration == 0 and data.get("start_time") and data.get("end_time"):
+                    try:
+                        start_dt = datetime.fromisoformat(data["start_time"])
+                        end_dt = datetime.fromisoformat(data["end_time"])
+                        duration = int((end_dt - start_dt).total_seconds())
+                    except:
+                        duration = 0
+                
+                log_summary = {
+                    "filename": filename,
+                    "room_id": data.get("room_id", "unknown"),
+                    "start_time": data.get("start_time"),
+                    "end_time": data.get("end_time"),
+                    "messages_count": data.get("messages_count", len(messages)),
+                    "duration": duration,
+                    "file_size": os.path.getsize(filepath)
+                }
+                logs.append(log_summary)
+                
+            except (json.JSONDecodeError, IOError):
+                continue
     
     return {
         "logs": logs,

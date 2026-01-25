@@ -100,21 +100,27 @@ function updateRoomMeta(roomId) {
         ? "Searching"
         : "Offline";
 
-  const statusBadge = card.querySelector(".status-badge:not(.msg-count)");
-  if (statusBadge) {
-    statusBadge.className = `status-badge ${statusClass}`;
-    statusBadge.innerHTML = `<span class="status-dot"></span>${statusText}`;
+  // Update client connection badges
+  const clientM = card.querySelector(".client-badge.client-m");
+  const clientF = card.querySelector(".client-badge.client-f");
+  if (clientM) {
+    clientM.className = `client-badge client-m ${room.is_active ? 'active' : room.is_paused ? 'paused' : room.m_connected ? 'connected' : 'offline'}`;
+  }
+  if (clientF) {
+    clientF.className = `client-badge client-f ${room.is_active ? 'active' : room.is_paused ? 'paused' : room.f_connected ? 'connected' : 'offline'}`;
   }
 
-  const msgCountBadge = card.querySelector(".status-badge.msg-count");
-  if (msgCountBadge) {
-    msgCountBadge.innerHTML = `<i data-lucide="message-square"></i>${room.messages_count}`;
+  // Update status pill
+  const statusPill = card.querySelector(".status-pill");
+  if (statusPill) {
+    statusPill.className = `status-pill ${statusClass}`;
+    statusPill.innerHTML = `<span class="status-dot"></span>${statusText}`;
   }
 
-  const connIndicators = card.querySelectorAll(".conn-dot");
-  if (connIndicators.length >= 2) {
-    connIndicators[0].className = `conn-dot ${room.m_connected ? "conn-online" : "conn-offline"}`;
-    connIndicators[1].className = `conn-dot ${room.f_connected ? "conn-online" : "conn-offline"}`;
+  // Update message counter
+  const msgCountValue = card.querySelector(".msg-count-value");
+  if (msgCountValue) {
+    msgCountValue.textContent = room.messages_count;
   }
 
   const controlPanel = card.querySelector(".control-panel");
@@ -159,17 +165,17 @@ function createControlPanelHTML(room) {
   }
   return `
     <div class="control-buttons">
-      <button class="btn btn-manual" 
-              onclick="toggleControl('${room.room_id}', 'M')"
-              ${!room.is_active ? "disabled" : ""}>
-        <i data-lucide="user"></i>
-        Control M
-      </button>
-      <button class="btn btn-manual" 
+      <button class="btn btn-manual btn-control-f" 
               onclick="toggleControl('${room.room_id}', 'F')"
               ${!room.is_active ? "disabled" : ""}>
         <i data-lucide="user"></i>
         Control F
+      </button>
+      <button class="btn btn-manual btn-control-m" 
+              onclick="toggleControl('${room.room_id}', 'M')"
+              ${!room.is_active ? "disabled" : ""}>
+        <i data-lucide="user"></i>
+        Control M
       </button>
     </div>
     <div class="action-buttons">
@@ -255,36 +261,31 @@ function createRoomCard(room) {
 
   card.innerHTML = `
     <div class="room-header">
-      <div class="room-header-top">
-        <div class="room-id">
-          <i data-lucide="hash"></i>
-          ${room.room_id.slice(-12)}
-        </div>
-        <div class="connection-status">
-          <span class="conn-indicator">
-            <span class="conn-dot ${room.m_connected ? "conn-online" : "conn-offline"}"></span>
-            M:${room.m_token.slice(0, 6)}
+      <div class="room-header-left">
+        <span class="room-id">#${room.room_id.slice(-8)}</span>
+        <div class="room-clients">
+          <span class="client-badge client-m ${room.is_active ? 'active' : room.is_paused ? 'paused' : room.m_connected ? 'connected' : 'offline'}">
+            M
           </span>
-          <span class="conn-indicator">
-            <span class="conn-dot ${room.f_connected ? "conn-online" : "conn-offline"}"></span>
-            F:${room.f_token.slice(0, 6)}
+          <span class="client-badge client-f ${room.is_active ? 'active' : room.is_paused ? 'paused' : room.f_connected ? 'connected' : 'offline'}">
+            F
           </span>
         </div>
       </div>
-      <div class="room-header-bottom">
-        <button class="btn-settings" onclick="openRoomSettings('${room.room_id}')" title="Room Settings">
+      <div class="room-header-center">
+        <span class="status-pill ${statusClass}">
+          <span class="status-dot"></span>
+          ${statusText}
+        </span>
+      </div>
+      <div class="room-header-right">
+        <span class="msg-counter">
+          <i data-lucide="message-square"></i>
+          <span class="msg-count-value">${room.messages_count}</span>
+        </span>
+        <button class="btn-icon btn-settings" onclick="openRoomSettings('${room.room_id}')" title="Settings">
           <i data-lucide="settings"></i>
         </button>
-        <div class="status-indicators">
-          <span class="status-badge ${statusClass}">
-            <span class="status-dot"></span>
-            ${statusText}
-          </span>
-          <span class="status-badge msg-count">
-            <i data-lucide="message-square"></i>
-            ${room.messages_count}
-          </span>
-        </div>
       </div>
     </div>
     <div class="chat-area" id="chat-${room.room_id}">

@@ -478,6 +478,7 @@ class ChatManager:
             "client_f_token": room.client_f.token[:10],
             "start_time": room.start_time.isoformat(),
             "end_time": datetime.now().isoformat(),
+            "duration": int((datetime.now() - room.start_time).total_seconds()),
             "messages_count": len(room.messages),
             "messages": room.messages
         }
