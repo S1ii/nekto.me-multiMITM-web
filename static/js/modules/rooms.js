@@ -173,13 +173,13 @@ function createControlPanelHTML(room) {
   }
   return `
     <div class="control-buttons">
-      <button class="btn btn-manual btn-control-f" 
+      <button class="btn btn-manual btn-control-${followerSex.toLowerCase()}" 
               onclick="toggleControl('${room.room_id}', 'F')"
               ${!room.is_active ? "disabled" : ""}>
         <i data-lucide="user"></i>
         Control ${followerSex}
       </button>
-      <button class="btn btn-manual btn-control-m" 
+      <button class="btn btn-manual btn-control-${leaderSex.toLowerCase()}" 
               onclick="toggleControl('${room.room_id}', 'L')"
               ${!room.is_active ? "disabled" : ""}>
         <i data-lucide="user"></i>

@@ -68,51 +68,79 @@
 }
 
 /* Success button - soft mint green (resume, positive action) */
+/* Success button - soft mint green (resume, positive action) */
 .btn-success {
-    background: linear-gradient(135deg, #7dd3b8, #5ec4a0);
-    color: #1a3d2e;
-    border: none;
+    background: transparent;
+    border: 1px solid #5ec4a0;
+    color: #5ec4a0;
 }
 
 .btn-success:hover:not(:disabled) {
-    background: linear-gradient(135deg, #5ec4a0, #4db58f);
-    box-shadow: 0 4px 16px rgba(125, 211, 184, 0.35);
+    background: rgba(94, 196, 160, 0.1);
+    box-shadow: 0 0 15px rgba(94, 196, 160, 0.15);
+}
+
+.btn-success:disabled {
+    border-color: var(--border);
+    background: var(--bg-tertiary);
+    color: var(--text-tertiary);
 }
 
 /* Warning button - soft amber/peach (restart, caution) */
+/* Warning button - soft amber/peach (restart, caution) */
 .btn-warning {
-    background: linear-gradient(135deg, #f0c78a, #e5b56e);
-    color: #4a3520;
-    border: none;
+    background: transparent;
+    border: 1px solid #e5b56e;
+    color: #e5b56e;
 }
 
 .btn-warning:hover:not(:disabled) {
-    background: linear-gradient(135deg, #e5b56e, #daa655);
-    box-shadow: 0 4px 16px rgba(240, 199, 138, 0.35);
+    background: rgba(229, 181, 110, 0.1);
+    box-shadow: 0 0 15px rgba(229, 181, 110, 0.15);
+}
+
+.btn-warning:disabled {
+    border-color: var(--border);
+    background: var(--bg-tertiary);
+    color: var(--text-tertiary);
 }
 
 /* Danger button - soft coral (close, stop) */
+/* Danger button - soft coral (close, stop) */
 .btn-danger {
-    background: linear-gradient(135deg, #f0a0a0, #e88888);
-    color: #4a2020;
-    border: none;
+    background: transparent;
+    border: 1px solid #e88888;
+    color: #e88888;
 }
 
 .btn-danger:hover:not(:disabled) {
-    background: linear-gradient(135deg, #e88888, #df7070);
-    box-shadow: 0 4px 16px rgba(240, 160, 160, 0.35);
+    background: rgba(232, 136, 136, 0.1);
+    box-shadow: 0 0 15px rgba(232, 136, 136, 0.15);
+}
+
+.btn-danger:disabled {
+    border-color: var(--border);
+    background: var(--bg-tertiary);
+    color: var(--text-tertiary);
 }
 
 /* Pause button - soft lavender (pause, wait) */
+/* Pause button - soft lavender (pause, wait) */
 .btn-pause {
-    background: linear-gradient(135deg, #b8a8d8, #a090c8);
-    color: #2d2540;
-    border: none;
+    background: transparent;
+    border: 1px solid #a090c8;
+    color: #a090c8;
 }
 
 .btn-pause:hover:not(:disabled) {
-    background: linear-gradient(135deg, #a090c8, #9080b8);
-    box-shadow: 0 4px 16px rgba(184, 168, 216, 0.35);
+    background: rgba(160, 144, 200, 0.1);
+    box-shadow: 0 0 15px rgba(160, 144, 200, 0.15);
+}
+
+.btn-pause:disabled {
+    border-color: var(--border);
+    background: var(--bg-tertiary);
+    color: var(--text-tertiary);
 }
 
 /* Manual control button */
@@ -135,6 +163,46 @@
     border-color: var(--accent);
     color: white;
     box-shadow: 0 0 20px var(--accent-glow);
+}
+
+/* Control M button (blue) */
+.btn-control-m {
+    background: transparent;
+    border: 1px solid #3b82f6;
+    color: #3b82f6;
+}
+
+.btn-control-m:hover:not(:disabled) {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: #2563eb;
+    color: #2563eb;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);
+}
+
+.btn-control-m:disabled {
+    border-color: var(--border);
+    background: var(--bg-tertiary);
+    color: var(--text-tertiary);
+}
+
+/* Control F button (pink) */
+.btn-control-f {
+    background: transparent;
+    border: 1px solid #ec4899;
+    color: #ec4899;
+}
+
+.btn-control-f:hover:not(:disabled) {
+    background: rgba(236, 72, 153, 0.1);
+    border-color: #db2777;
+    color: #db2777;
+    box-shadow: 0 0 15px rgba(236, 72, 153, 0.15);
+}
+
+.btn-control-f:disabled {
+    border-color: var(--border);
+    background: var(--bg-tertiary);
+    color: var(--text-tertiary);
 }
 
 /* Send button */
