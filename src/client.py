@@ -75,7 +75,7 @@ class Client(AsyncClient):
                 self.get_logger().warning("Wish role is unexcepted.", wish_role=wish_role)
 
         self.on("connect", self.on_connect)
-        self.on("disconnect", self.disconnect)
+        self.on("disconnect", self.on_disconnect)
         self.on("notice", self.on_notice)
         self.add_event_handler("auth.successToken", self.on_auth)
         self.add_event_handler("dialog.opened", self.on_dialog_opened)
@@ -87,11 +87,7 @@ class Client(AsyncClient):
 
     async def error_handler(self, data: Dict[str, Any], _: Self) -> None:
         # Игнорируем ошибки типа "Wrong data" и другие несущественные ошибки
-        error_id = data.get("id")
-        # Можно добавить логирование только критических ошибок
-        # if error_id not in [400]:  # 400 = Wrong data
-        #     self.get_logger().warning("Unexcepted error", data=data)
-        pass  # Просто игнорируем все ошибки
+        pass
 
     async def on_auth(self, data: Dict[str, Any], _: Self) -> None:
         self.get_logger().debug("The client has logged in.")
@@ -106,7 +102,9 @@ class Client(AsyncClient):
         await self.emit("action", data=payload)
 
     async def on_connect(self) -> None:
-        self.get_logger().debug(f"User has connected!")
+        self.get_logger().info(f"Connected to server!")
+        self.is_reconnecting = False  # Сбрасываем флаг переподключения
+        
         payload = {
             "token":self.token,
             "locale":self.locale,
@@ -122,7 +120,8 @@ class Client(AsyncClient):
         setattr(self, "dialog_id", data.get("id"))
     
     async def on_dialog_closed(self, data: Dict[str, Any], _: Self) -> None:
-        delattr(self, "dialog_id")
+        if hasattr(self, "dialog_id"):
+            delattr(self, "dialog_id")
 
     def get_handlers(self, name: str) -> List[Callable]:
         self.get_logger().debug(f"Getting {name} handlers!")
@@ -139,33 +138,27 @@ class Client(AsyncClient):
         import asyncio
         
         if not self.connected:
-            self.get_logger().warning("Клиент отключен, пытаемся переподключиться...")
+            self.get_logger().warning("Client disconnected, attempting to reconnect...")
             try:
                 await self.connect(max_retries=3, retry_delay=2)
             except Exception as e:
-                self.get_logger().error(f"Не удалось переподключиться: {e}")
+                self.get_logger().error(f"Reconnection failed: {e}")
                 return False
         
         try:
             await self.emit(event, data=data)
             return True
         except Exception as e:
-            error_msg = str(e)
-            self.get_logger().warning(f"Ошибка при отправке: {error_msg}")
-            
             # Если соединение потеряно, пробуем переподключиться
-            if "not a connected namespace" in error_msg or "packet queue is empty" in error_msg.lower():
-                self.get_logger().warning("Соединение потеряно, переподключаемся...")
-                try:
-                    await asyncio.sleep(1)
-                    await self.connect(max_retries=3, retry_delay=2)
-                    # Повторяем отправку после переподключения
-                    await self.emit(event, data=data)
-                    return True
-                except Exception as reconnect_error:
-                    self.get_logger().error(f"Не удалось переподключиться: {reconnect_error}")
-                    return False
-            return False
+            self.get_logger().warning(f"Error emitting event: {e}. Attempting reconnect...")
+            try:
+                await asyncio.sleep(1)
+                await self.connect(max_retries=3, retry_delay=2)
+                await self.emit(event, data=data)
+                return True
+            except Exception as reconnect_error:
+                self.get_logger().error(f"Reconnection and emit failed: {reconnect_error}")
+                return False
 
     async def search(self) -> bool:
         """Запуск поиска. Возвращает True если успешно."""
@@ -177,12 +170,29 @@ class Client(AsyncClient):
         return await self.safe_emit("action", data=payload)
 
     async def on_disconnect(self) -> None:
-        self.get_logger().debug(f"User has disconnected! token={self.token[:6]}, ua={self.ua[:6]}")
+        """Обработка отключения с авто-реконнектом"""
+        self.get_logger().warning(f"Disconnected from server!")
+        
+        # Вызываем обработчики (например обновление статуса комнаты)
         handlers = self.get_handlers("disconnect")
-        if not handlers: return
-        for handler in handlers:
-            await handler()
-        delattr(self, "id")
+        if handlers:
+            for handler in handlers:
+                await handler()
+                
+        if hasattr(self, "id"):
+            delattr(self, "id")
+            
+        # Автоматическое переподключение
+        # Если это не ручное отключение (которое мы пока не отслеживаем, но обычно disconnect вызывается нами)
+        # В данном случае WinError 10054 это разрыв со стороны сервера/сети
+        
+        import asyncio
+        self.get_logger().info("Starting auto-reconnection in 3 seconds...")
+        await asyncio.sleep(3)
+        try:
+            await self.connect(max_retries=100, retry_delay=5)
+        except Exception as e:
+            self.get_logger().error(f"Auto-reconnection failed: {e}")
 
     async def on_notice(self, data: Dict[str, Any]) -> None:
         self.get_logger().debug("Received notice!", notice=data)
