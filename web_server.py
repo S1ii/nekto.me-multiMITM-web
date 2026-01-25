@@ -141,22 +141,25 @@ async def lifespan(app: FastAPI):
     # Запуск текстового чата
     if MODE_CHAT:
         clients = list(get_clients())
-        male_clients = [c for c in clients if c.search_parameters.get('mySex') == 'M']
-        female_clients = [c for c in clients if c.search_parameters.get('mySex') == 'F']
         
         if DEBUG_MODE:
-            print(f"  [DEBUG] Найдено клиентов: M={len(male_clients)}, F={len(female_clients)}")
+            print(f"  [DEBUG] Найдено клиентов: {len(clients)}")
         
-        # Создаем комнаты
-        for i in range(min(len(male_clients), len(female_clients))):
-            room = manager.create_room(male_clients[i], female_clients[i])
-            print(f"  ✓ Room {i+1}: M:{male_clients[i].token[:10]} ↔ F:{female_clients[i].token[:10]}")
+        # Создаем комнаты парами (первый=leader, второй=follower)
+        for i in range(0, len(clients) - 1, 2):
+            leader = clients[i]
+            follower = clients[i + 1]
+            leader_sex = leader.search_parameters.get('mySex', 'M')
+            follower_sex = follower.search_parameters.get('mySex', 'F')
+            
+            room = manager.create_room(leader, follower, leader_sex, follower_sex)
+            pair_type = f"{leader_sex}{follower_sex}"
+            print(f"  ✓ Room {i//2 + 1} [{pair_type}]: {leader.token[:10]} ↔ {follower.token[:10]}")
         
         # Подключаем клиентов
-        all_clients = male_clients + female_clients
         connected = 0
         
-        for client in all_clients:
+        for client in clients:
             try:
                 if DEBUG_MODE:
                     print(f"  [DEBUG] Подключение клиента: {client.token[:10]}...")
@@ -170,7 +173,7 @@ async def lifespan(app: FastAPI):
                     import traceback
                     traceback.print_exc()
         
-        print(f"\n  📊 Text Chat: {connected}/{len(all_clients)} клиентов подключено")
+        print(f"\n  📊 Text Chat: {connected}/{len(clients)} клиентов подключено")
     else:
         print("  ℹ️  Текстовый чат отключен (используйте --chat для включения)")
     
@@ -216,12 +219,12 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # Pydantic модели
 class SendMessageRequest(BaseModel):
     room_id: str
-    sex: str
+    role: str  # 'L' for Leader or 'F' for Follower
     message: str
 
 class ToggleControlRequest(BaseModel):
     room_id: str
-    sex: str
+    role: str  # 'L' for Leader or 'F' for Follower
 
 class ForceCloseRequest(BaseModel):
     room_id: str
@@ -257,7 +260,7 @@ async def websocket_endpoint(websocket: WebSocket):
 async def send_message(request: SendMessageRequest):
     success = await manager.send_manual_message(
         request.room_id,
-        request.sex,
+        request.role,
         request.message
     )
     
@@ -268,7 +271,7 @@ async def send_message(request: SendMessageRequest):
 
 @app.post("/toggle-control")
 async def toggle_control(request: ToggleControlRequest):
-    success = await manager.toggle_manual_control(request.room_id, request.sex)
+    success = await manager.toggle_manual_control(request.room_id, request.role)
     
     if not success:
         raise HTTPException(status_code=404, detail="Room not found")

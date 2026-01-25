@@ -89,25 +89,29 @@ function updateRoomMeta(roomId) {
     ? "status-active"
     : room.is_paused
       ? "status-paused"
-      : room.m_connected && room.f_connected
+      : room.leader_connected && room.follower_connected
         ? "status-waiting"
         : "status-offline";
   const statusText = room.is_active
     ? "Active"
     : room.is_paused
       ? "Paused"
-      : room.m_connected && room.f_connected
+      : room.leader_connected && room.follower_connected
         ? "Searching"
         : "Offline";
 
-  // Update client connection badges
-  const clientM = card.querySelector(".client-badge.client-m");
-  const clientF = card.querySelector(".client-badge.client-f");
-  if (clientM) {
-    clientM.className = `client-badge client-m ${room.is_active ? 'active' : room.is_paused ? 'paused' : room.m_connected ? 'connected' : 'offline'}`;
+  // Update client connection badges (using dynamic sex from API)
+  const clientLeader = card.querySelector(".client-badge.client-leader");
+  const clientFollower = card.querySelector(".client-badge.client-follower");
+  if (clientLeader) {
+    const leaderSex = room.leader_sex || 'M';
+    clientLeader.className = `client-badge client-leader client-${leaderSex.toLowerCase()} ${room.is_active ? 'active' : room.is_paused ? 'paused' : room.leader_connected ? 'connected' : 'offline'}`;
+    clientLeader.textContent = leaderSex;
   }
-  if (clientF) {
-    clientF.className = `client-badge client-f ${room.is_active ? 'active' : room.is_paused ? 'paused' : room.f_connected ? 'connected' : 'offline'}`;
+  if (clientFollower) {
+    const followerSex = room.follower_sex || 'F';
+    clientFollower.className = `client-badge client-follower client-${followerSex.toLowerCase()} ${room.is_active ? 'active' : room.is_paused ? 'paused' : room.follower_connected ? 'connected' : 'offline'}`;
+    clientFollower.textContent = followerSex;
   }
 
   // Update status pill
@@ -135,16 +139,20 @@ function updateRoomMeta(roomId) {
  * Generate control panel HTML for a room
  */
 function createControlPanelHTML(room) {
+  const leaderSex = room.leader_sex || 'M';
+  const followerSex = room.follower_sex || 'F';
+
   if (room.manual_control) {
+    const controlledSex = room.manual_control === 'L' ? leaderSex : followerSex;
     return `
       <div class="manual-notice">
         <i data-lucide="gamepad-2"></i>
-        <span>Manual control: <strong>${room.manual_control}</strong>. Chatting with real user.</span>
+        <span>Manual control: <strong>${controlledSex}</strong>. Chatting with real user.</span>
       </div>
       <div class="input-group">
         <input type="text" 
                id="input-${room.room_id}" 
-               placeholder="Type as ${room.manual_control}..."
+               placeholder="Type as ${controlledSex}..."
                onkeypress="handleKeyPress(event, '${room.room_id}', '${room.manual_control}')"
                ${!room.is_active ? "disabled" : ""}>
         <button class="btn btn-send" 
@@ -169,13 +177,13 @@ function createControlPanelHTML(room) {
               onclick="toggleControl('${room.room_id}', 'F')"
               ${!room.is_active ? "disabled" : ""}>
         <i data-lucide="user"></i>
-        Control F
+        Control ${followerSex}
       </button>
       <button class="btn btn-manual btn-control-m" 
-              onclick="toggleControl('${room.room_id}', 'M')"
+              onclick="toggleControl('${room.room_id}', 'L')"
               ${!room.is_active ? "disabled" : ""}>
         <i data-lucide="user"></i>
-        Control M
+        Control ${leaderSex}
       </button>
     </div>
     <div class="action-buttons">
@@ -212,14 +220,14 @@ function createRoomCard(room) {
     ? "status-active"
     : room.is_paused
       ? "status-paused"
-      : room.m_connected && room.f_connected
+      : room.leader_connected && room.follower_connected
         ? "status-waiting"
         : "status-offline";
   const statusText = room.is_active
     ? "Active"
     : room.is_paused
       ? "Paused"
-      : room.m_connected && room.f_connected
+      : room.leader_connected && room.follower_connected
         ? "Searching"
         : "Offline";
 
@@ -264,11 +272,11 @@ function createRoomCard(room) {
       <div class="room-header-left">
         <span class="room-id">#${room.room_id.slice(-8)}</span>
         <div class="room-clients">
-          <span class="client-badge client-m ${room.is_active ? 'active' : room.is_paused ? 'paused' : room.m_connected ? 'connected' : 'offline'}">
-            M
+          <span class="client-badge client-leader client-${(room.leader_sex || 'M').toLowerCase()} ${room.is_active ? 'active' : room.is_paused ? 'paused' : room.leader_connected ? 'connected' : 'offline'}">
+            ${room.leader_sex || 'M'}
           </span>
-          <span class="client-badge client-f ${room.is_active ? 'active' : room.is_paused ? 'paused' : room.f_connected ? 'connected' : 'offline'}">
-            F
+          <span class="client-badge client-follower client-${(room.follower_sex || 'F').toLowerCase()} ${room.is_active ? 'active' : room.is_paused ? 'paused' : room.follower_connected ? 'connected' : 'offline'}">
+            ${room.follower_sex || 'F'}
           </span>
         </div>
       </div>
@@ -308,15 +316,15 @@ function createRoomCard(room) {
 // Room API Actions
 // ============================================
 
-async function toggleControl(roomId, sex) {
+async function toggleControl(roomId, role) {
   await fetch("/toggle-control", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ room_id: roomId, sex: sex }),
+    body: JSON.stringify({ room_id: roomId, role: role }),
   });
 }
 
-async function sendMessage(roomId, sex) {
+async function sendMessage(roomId, role) {
   const input = document.getElementById(`input-${roomId}`);
   const message = input.value.trim();
 
@@ -325,7 +333,7 @@ async function sendMessage(roomId, sex) {
   const response = await fetch("/send-message", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ room_id: roomId, sex: sex, message: message }),
+    body: JSON.stringify({ room_id: roomId, role: role, message: message }),
   });
 
   if (response.ok) {
@@ -361,9 +369,9 @@ async function togglePause(roomId) {
   });
 }
 
-function handleKeyPress(event, roomId, sex) {
+function handleKeyPress(event, roomId, role) {
   if (event.key === "Enter") {
-    sendMessage(roomId, sex);
+    sendMessage(roomId, role);
   }
 }
 

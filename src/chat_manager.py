@@ -14,31 +14,37 @@ from dataclasses import dataclass, field
 class DialogRoom:
     """Представляет один диалог между двумя клиентами"""
     id: str
-    client_m: Client  # Мужской клиент
-    client_f: Client  # Женский клиент
+    client_leader: Client  # Первый клиент в паре (всегда ищет первым)
+    client_follower: Client  # Второй клиент в паре (ищет после лидера)
+    leader_sex: str  # 'M' or 'F' - пол лидера
+    follower_sex: str  # 'M' or 'F' - пол фолловера
     messages: List[dict] = field(default_factory=list)
     start_time: datetime = field(default_factory=datetime.now)
     is_active: bool = False
-    manual_control: Optional[str] = None  # 'M' or 'F' - кто под ручным управлением
+    manual_control: Optional[str] = None  # 'L' or 'F' - кто под ручным управлением (Leader/Follower)
     is_paused: bool = False  # Поиск приостановлен
     
     def get_user_messages_count(self) -> int:
         """Возвращает количество только пользовательских сообщений (без system)"""
-        return sum(1 for msg in self.messages if msg.get('from') in ('M', 'F'))
+        return sum(1 for msg in self.messages if msg.get('from') in ('L', 'F'))
     
     def get_controlled_client(self) -> Optional[Client]:
-        if self.manual_control == 'M':
-            return self.client_m
+        if self.manual_control == 'L':
+            return self.client_leader
         elif self.manual_control == 'F':
-            return self.client_f
+            return self.client_follower
         return None
     
     def get_auto_client(self) -> Optional[Client]:
-        if self.manual_control == 'M':
-            return self.client_f
+        if self.manual_control == 'L':
+            return self.client_follower
         elif self.manual_control == 'F':
-            return self.client_m
+            return self.client_leader
         return None
+    
+    def get_pair_type(self) -> str:
+        """Возвращает тип пары: MM, FF, MF, FM"""
+        return f"{self.leader_sex}{self.follower_sex}"
 
 class ChatManager:
     """Управляет несколькими параллельными диалогами"""
@@ -65,21 +71,24 @@ class ChatManager:
             "is_manual": False
         }
     
-    def create_room(self, client_m: Client, client_f: Client) -> DialogRoom:
+    def create_room(self, client_leader: Client, client_follower: Client, 
+                     leader_sex: str, follower_sex: str) -> DialogRoom:
         """Создает новую комнату для диалога"""
         room_id = generate_random_id()
         is_paused = not get_auto_search()
         room = DialogRoom(
             id=room_id,
-            client_m=client_m,
-            client_f=client_f,
+            client_leader=client_leader,
+            client_follower=client_follower,
+            leader_sex=leader_sex,
+            follower_sex=follower_sex,
             is_paused=is_paused
         )
         self.rooms[room_id] = room
         
         # Привязываем обработчики событий
-        self._setup_client_handlers(client_m, room, 'M')
-        self._setup_client_handlers(client_f, room, 'F')
+        self._setup_client_handlers(client_leader, room, 'L')  # Leader
+        self._setup_client_handlers(client_follower, room, 'F')  # Follower
         
         return room
     
@@ -101,15 +110,15 @@ class ChatManager:
     
     async def _on_auth(self, data: Dict, client: Client, room: DialogRoom):
         """Обработка авторизации клиента"""
-        # Только мужской клиент начинает поиск (если не на паузе)
-        if client.sex_in_room == 'M' and not room.is_paused:
-            system_msg = self._create_system_message(f"{client.sex_in_room} searching...")
+        # Только Leader начинает поиск (если не на паузе)
+        if client.sex_in_room == 'L' and not room.is_paused:
+            system_msg = self._create_system_message(f"{room.leader_sex} searching...")
             room.messages.append(system_msg)
             await self._broadcast_message(room, system_msg)
             
             await client.search()
             await self._broadcast_room_update(room)
-        elif client.sex_in_room == 'M' and room.is_paused:
+        elif client.sex_in_room == 'L' and room.is_paused:
              # Если поиск отключен, сообщаем об этом
             system_msg = self._create_system_message(f"Auto-search disabled. Waiting for manual start.")
             room.messages.append(system_msg)
@@ -132,18 +141,21 @@ class ChatManager:
         room.start_time = datetime.now()
         room.messages = []  # Очищаем при новом диалоге
         
+        # Определяем пол клиента для сообщения
+        client_sex = room.leader_sex if client.sex_in_room == 'L' else room.follower_sex
+        
         # Системное сообщение
-        system_msg = self._create_system_message(f"{client.sex_in_room} found dialog")
+        system_msg = self._create_system_message(f"{client_sex} found dialog")
         room.messages.append(system_msg)
         await self._broadcast_message(room, system_msg)
         
-        # Если мужской клиент нашел диалог, запускаем поиск для женского (если не на паузе)
-        if client.sex_in_room == 'M' and not room.is_paused:
-            other_client = room.client_f
+        # Если Leader нашел диалог, запускаем поиск для Follower (если не на паузе)
+        if client.sex_in_room == 'L' and not room.is_paused:
+            other_client = room.client_follower
             if not hasattr(other_client, 'dialog_id'):
-                search_msg_f = self._create_system_message("F searching...")
-                room.messages.append(search_msg_f)
-                await self._broadcast_message(room, search_msg_f)
+                search_msg = self._create_system_message(f"{room.follower_sex} searching...")
+                room.messages.append(search_msg)
+                await self._broadcast_message(room, search_msg)
                 await other_client.search()
         
         await self._broadcast_room_update(room)
@@ -166,13 +178,17 @@ class ChatManager:
         if sender_id == client.id:
             return  # Пропускаем свои сообщения
         
-        # Определяем от кого пришло сообщение
-        is_from_m = client.sex_in_room == 'F'  # Если мы F, значит получили от M
+        # Определяем от кого пришло сообщение (по роли в комнате)
+        is_from_leader = client.sex_in_room == 'F'  # Если мы Follower, значит получили от Leader
+        
+        # Определяем пол отправителя для UI
+        sender_sex = room.leader_sex if is_from_leader else room.follower_sex
         
         # Сохраняем сообщение ОДИН раз
         message_entry = {
             "timestamp": datetime.now().isoformat(),
-            "from": "M" if is_from_m else "F",
+            "from": sender_sex,  # Показываем реальный пол (M/F)
+            "role": "L" if is_from_leader else "F",  # Роль в паре
             "sender_id": sender_id,
             "message": message,
             "is_manual": False  # Это сообщение от реального собеседника, не наше ручное
@@ -180,11 +196,12 @@ class ChatManager:
         room.messages.append(message_entry)
         
         # Определяем другого клиента в комнате
-        other_client = room.client_f if client.sex_in_room == 'M' else room.client_m
+        other_client = room.client_follower if client.sex_in_room == 'L' else room.client_leader
+        other_role = 'F' if client.sex_in_room == 'L' else 'L'
         
         # КЛЮЧЕВАЯ ЛОГИКА: Пересылаем только если другой клиент НЕ под ручным управлением
         # Если под ручным управлением - сообщения идут только в UI, бот не отвечает
-        if room.manual_control != other_client.sex_in_room:
+        if room.manual_control != other_role:
             if hasattr(other_client, 'dialog_id') and other_client.is_connected():
                 payload = {
                     "action": "anon.message",
@@ -200,7 +217,7 @@ class ChatManager:
     
     async def _on_typing(self, data: Dict, client: Client, room: DialogRoom):
         """Обработка индикатора печати"""
-        other_client = room.client_f if client.sex_in_room == 'M' else room.client_m
+        other_client = room.client_follower if client.sex_in_room == 'L' else room.client_leader
         
         if hasattr(other_client, 'dialog_id') and other_client.is_connected():
             payload = {
@@ -213,12 +230,15 @@ class ChatManager:
     
     async def _on_dialog_closed(self, data: Dict, client: Client, room: DialogRoom):
         """Диалог закрыт"""
-        # Определяем, кто закрыл диалог
-        closer_sex = client.sex_in_room
-        other_client = room.client_f if closer_sex == 'M' else room.client_m
+        # Определяем, кто закрыл диалог (роль и пол)
+        closer_role = client.sex_in_room  # 'L' or 'F'
+        closer_sex = room.leader_sex if closer_role == 'L' else room.follower_sex
+        other_client = room.client_follower if closer_role == 'L' else room.client_leader
+        other_role = 'F' if closer_role == 'L' else 'L'
+        other_sex = room.follower_sex if closer_role == 'L' else room.leader_sex
         
         # Если мы под ручным управлением и закрылся НЕ наш клиент — игнорируем
-        if room.manual_control and room.manual_control != closer_sex:
+        if room.manual_control and room.manual_control != closer_role:
             system_msg = self._create_system_message(
                 f"Interlocutor for {closer_sex} left. Your dialog ({room.manual_control}) stays active."
             )
@@ -228,8 +248,9 @@ class ChatManager:
             return
 
         # В остальных случаях (ручное управление не включено или закрыл наш подконтрольный) — закрываем всё
+        # MITM логика: показываем пол ДРУГОГО клиента (так как для собеседника other это выглядит как если бы other ушел)
         if room.is_active:
-            system_msg = self._create_system_message(f"{closer_sex} closed dialog")
+            system_msg = self._create_system_message(f"{other_sex} closed dialog")
             room.messages.append(system_msg)
             await self._broadcast_message(room, system_msg)
             
@@ -248,32 +269,36 @@ class ChatManager:
         if hasattr(client, 'dialog_id'):
             delattr(client, 'dialog_id')
         
-        # Запускаем поиск только для M (если не на паузе)
-        # F начнет поиск автоматически когда M найдет диалог (в _on_dialog_opened)
+        # Запускаем поиск только для Leader (если не на паузе)
+        # Follower начнет поиск автоматически когда Leader найдет диалог (в _on_dialog_opened)
         if not room.is_paused:
             await asyncio.sleep(1)
             
-            search_msg_m = self._create_system_message("M searching...")
-            room.messages.append(search_msg_m)
-            await self._broadcast_message(room, search_msg_m)
-            await room.client_m.search()
+            search_msg = self._create_system_message(f"{room.leader_sex} searching...")
+            room.messages.append(search_msg)
+            await self._broadcast_message(room, search_msg)
+            await room.client_leader.search()
         
         await self._broadcast_room_update(room)
     
-    async def send_manual_message(self, room_id: str, sex: str, message: str) -> bool:
-        """Отправка сообщения в ручном режиме"""
+    async def send_manual_message(self, room_id: str, role: str, message: str) -> bool:
+        """Отправка сообщения в ручном режиме
+        Args:
+            role: 'L' for Leader or 'F' for Follower
+        """
         room = self.rooms.get(room_id)
         if not room or not room.is_active:
             return False
         
-        client = room.client_m if sex == 'M' else room.client_f
+        client = room.client_leader if role == 'L' else room.client_follower
+        client_sex = room.leader_sex if role == 'L' else room.follower_sex
         
         if not hasattr(client, 'dialog_id'):
             return False
         
         # Проверяем подключение перед отправкой
         if not client.is_connected():
-            self.logger.warning(f"Клиент {sex} не подключен, сообщение не отправлено")
+            self.logger.warning(f"Клиент {role} ({client_sex}) не подключен, сообщение не отправлено")
             return False
         
         payload = {
@@ -290,7 +315,8 @@ class ChatManager:
         # Записываем сообщение
         message_entry = {
             "timestamp": datetime.now().isoformat(),
-            "from": sex,
+            "from": client_sex,  # Показываем реальный пол
+            "role": role,
             "sender_id": client.id,
             "message": message,
             "is_manual": True
@@ -300,23 +326,29 @@ class ChatManager:
         
         return True
     
-    async def toggle_manual_control(self, room_id: str, sex: str) -> bool:
-        """Переключение ручного управления"""
+    async def toggle_manual_control(self, room_id: str, role: str) -> bool:
+        """Переключение ручного управления
+        Args:
+            role: 'L' for Leader or 'F' for Follower
+        """
         room = self.rooms.get(room_id)
         if not room or not room.is_active:
             return False
         
         # Определяем клиентов
-        controlled_client = room.client_m if sex == 'M' else room.client_f
-        other_client = room.client_f if sex == 'M' else room.client_m
+        controlled_client = room.client_leader if role == 'L' else room.client_follower
+        controlled_sex = room.leader_sex if role == 'L' else room.follower_sex
+        other_client = room.client_follower if role == 'L' else room.client_leader
+        other_role = 'F' if role == 'L' else 'L'
+        other_sex = room.follower_sex if role == 'L' else room.leader_sex
         
-        if room.manual_control == sex:
+        if room.manual_control == role:
             # Выключаем ручное управление
             room.manual_control = None
-            system_msg = self._create_system_message(f"{sex} bot enabled")
+            system_msg = self._create_system_message(f"{controlled_sex} bot enabled")
         else:
             # Включаем ручное управление
-            room.manual_control = sex
+            room.manual_control = role
             
             # Закрываем диалог у другого клиента (который НЕ под управлением)
             if hasattr(other_client, 'dialog_id'):
@@ -326,7 +358,7 @@ class ChatManager:
                 delattr(other_client, 'dialog_id')
             
             system_msg = self._create_system_message(
-                f"{sex} manual control enabled. {other_client.sex_in_room} dialog closed."
+                f"{controlled_sex} manual control enabled. {other_sex} dialog closed."
             )
         
         room.messages.append(system_msg)
@@ -349,7 +381,7 @@ class ChatManager:
         room.manual_control = None
         
         # Закрываем диалог у обоих клиентов
-        for client in [room.client_m, room.client_f]:
+        for client in [room.client_leader, room.client_follower]:
             if hasattr(client, 'dialog_id'):
                 payload = {"action": "anon.leaveDialog", "dialogId": client.dialog_id}
                 if client.is_connected():
@@ -358,14 +390,14 @@ class ChatManager:
         
         await self._broadcast_room_update(room)
         
-        # Запускаем поиск только для M (если не на паузе)
+        # Запускаем поиск только для Leader (если не на паузе)
         if not room.is_paused:
             await asyncio.sleep(1)
             
-            search_msg_m = self._create_system_message("M searching...")
-            room.messages.append(search_msg_m)
-            await self._broadcast_message(room, search_msg_m)
-            await room.client_m.search()
+            search_msg = self._create_system_message(f"{room.leader_sex} searching...")
+            room.messages.append(search_msg)
+            await self._broadcast_message(room, search_msg)
+            await room.client_leader.search()
         
         await self._broadcast_room_update(room)
         return True
@@ -388,7 +420,7 @@ class ChatManager:
         room.manual_control = None
         
         # Закрываем диалоги если они были открыты
-        for client in [room.client_m, room.client_f]:
+        for client in [room.client_leader, room.client_follower]:
             if hasattr(client, 'dialog_id'):
                 if client.is_connected():
                     payload = {"action": "anon.leaveDialog", "dialogId": client.dialog_id}
@@ -397,14 +429,14 @@ class ChatManager:
         
         await self._broadcast_room_update(room)
         
-        # Запускаем новый поиск только для M (если не на паузе)
+        # Запускаем новый поиск только для Leader (если не на паузе)
         if not room.is_paused:
             await asyncio.sleep(1)
             
-            search_msg_m = self._create_system_message("M searching...")
-            room.messages.append(search_msg_m)
-            await self._broadcast_message(room, search_msg_m)
-            await room.client_m.search()
+            search_msg = self._create_system_message(f"{room.leader_sex} searching...")
+            room.messages.append(search_msg)
+            await self._broadcast_message(room, search_msg)
+            await room.client_leader.search()
         
         await self._broadcast_room_update(room)
         return True
@@ -431,7 +463,7 @@ class ChatManager:
             room.manual_control = None
             
             # Отменяем активный поиск и закрываем диалоги
-            for client in [room.client_m, room.client_f]:
+            for client in [room.client_leader, room.client_follower]:
                 # Отменяем поиск если он активен
                 if client.is_connected():
                     try:
@@ -452,13 +484,13 @@ class ChatManager:
             room.messages.append(system_msg)
             await self._broadcast_message(room, system_msg)
             
-            # Запускаем поиск для M
+            # Запускаем поиск для Leader
             await asyncio.sleep(0.5)
             
-            search_msg_m = self._create_system_message("M searching...")
-            room.messages.append(search_msg_m)
-            await self._broadcast_message(room, search_msg_m)
-            await room.client_m.search()
+            search_msg = self._create_system_message(f"{room.leader_sex} searching...")
+            room.messages.append(search_msg)
+            await self._broadcast_message(room, search_msg)
+            await room.client_leader.search()
         
         await self._broadcast_room_update(room)
         return True
@@ -474,8 +506,11 @@ class ChatManager:
         
         chat_data = {
             "room_id": room.id,
-            "client_m_token": room.client_m.token[:10],
-            "client_f_token": room.client_f.token[:10],
+            "pair_type": room.get_pair_type(),
+            "leader_token": room.client_leader.token[:10],
+            "follower_token": room.client_follower.token[:10],
+            "leader_sex": room.leader_sex,
+            "follower_sex": room.follower_sex,
             "start_time": room.start_time.isoformat(),
             "end_time": datetime.now().isoformat(),
             "duration": int((datetime.now() - room.start_time).total_seconds()),
@@ -502,10 +537,13 @@ class ChatManager:
             "manual_control": room.manual_control,
             "messages_count": room.get_user_messages_count(),
             "is_paused": room.is_paused,
-            "m_connected": hasattr(room.client_m, 'id'),
-            "f_connected": hasattr(room.client_f, 'id'),
-            "m_in_dialog": hasattr(room.client_m, 'dialog_id'),
-            "f_in_dialog": hasattr(room.client_f, 'dialog_id'),
+            "pair_type": room.get_pair_type(),
+            "leader_sex": room.leader_sex,
+            "follower_sex": room.follower_sex,
+            "leader_connected": hasattr(room.client_leader, 'id'),
+            "follower_connected": hasattr(room.client_follower, 'id'),
+            "leader_in_dialog": hasattr(room.client_leader, 'dialog_id'),
+            "follower_in_dialog": hasattr(room.client_follower, 'dialog_id'),
         }
         
         disconnected = set()
@@ -549,14 +587,17 @@ class ChatManager:
             "manual_control": room.manual_control,
             "messages_count": room.get_user_messages_count(),
             "is_paused": room.is_paused,
+            "pair_type": room.get_pair_type(),
+            "leader_sex": room.leader_sex,
+            "follower_sex": room.follower_sex,
             "messages": room.messages[-50:],  # Последние 50 сообщений
             "start_time": room.start_time.isoformat() if room.is_active else None,
-            "m_token": room.client_m.token[:10],
-            "f_token": room.client_f.token[:10],
-            "m_connected": hasattr(room.client_m, 'id'),
-            "f_connected": hasattr(room.client_f, 'id'),
-            "m_in_dialog": hasattr(room.client_m, 'dialog_id'),
-            "f_in_dialog": hasattr(room.client_f, 'dialog_id'),
+            "leader_token": room.client_leader.token[:10],
+            "follower_token": room.client_follower.token[:10],
+            "leader_connected": hasattr(room.client_leader, 'id'),
+            "follower_connected": hasattr(room.client_follower, 'id'),
+            "leader_in_dialog": hasattr(room.client_leader, 'dialog_id'),
+            "follower_in_dialog": hasattr(room.client_follower, 'dialog_id'),
         }
     
     def get_all_rooms_status(self) -> List[dict]:
@@ -570,7 +611,7 @@ class ChatManager:
         for room in self.rooms.values():
             if room.is_active:
                 # Закрываем активные диалоги
-                for client in [room.client_m, room.client_f]:
+                for client in [room.client_leader, room.client_follower]:
                     if hasattr(client, 'dialog_id') and client.is_connected():
                         try:
                             payload = {"action": "anon.leaveDialog", "dialogId": client.dialog_id}
@@ -596,8 +637,8 @@ class ChatManager:
         
         clients_to_disconnect = set()
         for room in self.rooms.values():
-            clients_to_disconnect.add(room.client_m)
-            clients_to_disconnect.add(room.client_f)
+            clients_to_disconnect.add(room.client_leader)
+            clients_to_disconnect.add(room.client_follower)
         
         for client in clients_to_disconnect:
             try:
